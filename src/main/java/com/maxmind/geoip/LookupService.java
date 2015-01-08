@@ -802,10 +802,13 @@ public class LookupService {
         }
         if(updateCallback == null) return;
         watchThread = new Thread("GeoAPI FileWatcher") {
+            final Path path = dbInfo.path;
+            final DBType type = dbType;
+
             @Override
             public void run() {
-                final Path dirPath = dbInfo.path.getParent();
-                final Path filePath = dbInfo.path.getFileName();
+                final Path dirPath = path.getParent();
+                final Path filePath =path.getFileName();
                 try(WatchService watchService = dirPath.getFileSystem().newWatchService()) {
                     WatchKey key = dirPath.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY);
                     while(true) {
@@ -814,7 +817,9 @@ public class LookupService {
                         for (WatchEvent<?> event : wk.pollEvents())
                             doUpdate = doUpdate || filePath.equals(event.context());
                         key.reset();
-                        if(doUpdate) updateCallback.update(new LookupService(dbInfo.path, dbType));
+                        LookupService updatedService = new LookupService(path, type);
+                        updatedService.watchThread = watchThread;
+                        if(doUpdate) updateCallback.update(new LookupService(path, type));
                     }
                 } catch (IOException | InterruptedException e) {
                     e.printStackTrace();
