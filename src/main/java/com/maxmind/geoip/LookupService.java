@@ -818,7 +818,7 @@ public class LookupService {
                             doUpdate = doUpdate || filePath.equals(event.context());
                         key.reset();
                         LookupService updatedService = new LookupService(path, type);
-                        updatedService.watchThread = watchThread;
+                        updatedService.watchThread = this;
                         if(doUpdate) updateCallback.update(new LookupService(path, type));
                     }
                 } catch (IOException | InterruptedException e) {
