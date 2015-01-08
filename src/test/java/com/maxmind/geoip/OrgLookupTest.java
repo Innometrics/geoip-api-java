@@ -11,8 +11,7 @@ import org.junit.Test;
 public class OrgLookupTest {
 	@Test
 	public void testOrgLookup() throws IOException {
-		LookupService orgl = new LookupService(
-				"src/test/resources/GeoIP/GeoIPOrg.dat");
+		LookupService orgl = new LookupService("src/test/resources/GeoIP/GeoIPOrg.dat", LookupService.DBType.File);
 
 		assertEquals("DSLAM WAN Allocation", orgl.getOrg("70.46.123.145"));
 		orgl.close();
@@ -20,8 +19,7 @@ public class OrgLookupTest {
 
 	@Test
 	public void testIspLookup() throws IOException {
-		LookupService ispl = new LookupService(
-				"src/test/resources/GeoIP/GeoIPISP.dat");
+		LookupService ispl = new LookupService("src/test/resources/GeoIP/GeoIPISP.dat", LookupService.DBType.File);
 
 		assertEquals("FDN Communications", ispl.getOrg("70.46.123.145"));
 		ispl.close();

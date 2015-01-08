@@ -11,12 +11,12 @@ public class CountryLookupV6Test {
 	public void testCountryLookup() throws IOException {
 
 		String dbfile = "src/test/resources/GeoIP/GeoIPv6.dat";
-		LookupService cl = new LookupService(dbfile,
-				LookupService.GEOIP_MEMORY_CACHE);
+		LookupService cl = new LookupService(dbfile, LookupService.DBType.MEMORY_CACHE);
 
-		assertEquals("US", cl.getCountryV6("64.17.254.216").getCode());
-		assertEquals("United States", cl.getCountryV6("64.17.254.216")
-				.getName());
+        Country countryV6 = cl.getCountryV6("64.17.254.216");
+        assertEquals("US", countryV6.getCode());
+		assertEquals("United States", countryV6
+                .getName());
 		assertEquals("US", cl.getCountryV6("::64.17.254.216").getCode());
 		assertEquals("US", cl.getCountryV6("::ffff:64.17.254.216").getCode());
 

@@ -16,8 +16,7 @@ public class CountryLookupTest {
 	public void testCountryLookup() throws IOException {
 
 		String dbfile = "src/test/resources/GeoIP/GeoIP.dat";
-		LookupService cl = new LookupService(dbfile,
-				LookupService.GEOIP_MEMORY_CACHE);
+		LookupService cl = new LookupService(dbfile, LookupService.DBType.MEMORY_CACHE);
 
 		assertEquals("US", cl.getCountry("64.17.254.216").getCode());
 		assertEquals("United States", cl.getCountry("64.17.254.216").getName());

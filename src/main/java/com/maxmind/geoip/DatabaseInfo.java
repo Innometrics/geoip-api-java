@@ -20,6 +20,12 @@
 
 package com.maxmind.geoip;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -67,28 +73,84 @@ public class DatabaseInfo {
     public final static int NETSPEED_EDITION_REV1 = 32;
     public final static int NETSPEED_EDITION_REV1_V6 = 33;
 
-    private static SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMdd");
+    final static int STRUCTURE_INFO_MAX_SIZE = 20;
+    final static int DATABASE_INFO_MAX_SIZE = 100;
 
-    private String info;
+
+    final static int STANDARD_RECORD_LENGTH = 3;
+    final static int ORG_RECORD_LENGTH = 4;
+    final static int SEGMENT_RECORD_LENGTH = 3;
+
+
+    public final Path path;
+    //    private final String info;
+    public final int databaseType;
+    public final int recordLength;
+    public final int databaseSegment;
+
+    private final boolean premium;
+    private final Date date;
 
     /**
      * Creates a new DatabaseInfo object given the database info String.
      *
-     * @param info
+     * @param path
      */
-    public DatabaseInfo(String info) {
-        this.info = info;
+    public DatabaseInfo(Path path) throws IOException {
+        if (path == null) throw new IllegalArgumentException("Path is null!");
+
+        this.path = path;
+        ByteBuffer header = getHeader(path);
+        byte dbType = header.hasRemaining() ?header.get() : COUNTRY_EDITION;
+        databaseType = dbType >= 106 ? (byte)(dbType - 105) : dbType;
+        switch (databaseType) {
+            case CITY_EDITION_REV0:
+            case CITY_EDITION_REV1:
+            case ASNUM_EDITION_V6:
+            case NETSPEED_EDITION_REV1:
+            case NETSPEED_EDITION_REV1_V6:
+            case CITY_EDITION_REV0_V6:
+            case CITY_EDITION_REV1_V6:
+            case ASNUM_EDITION: {
+                recordLength = STANDARD_RECORD_LENGTH;
+                databaseSegment = databaseSegment(header);
+            } break;
+            case ORG_EDITION:
+            case ORG_EDITION_V6:
+            case ISP_EDITION:
+            case ISP_EDITION_V6:
+            case DOMAIN_EDITION:
+            case DOMAIN_EDITION_V6: {
+                recordLength = ORG_RECORD_LENGTH;
+                databaseSegment = databaseSegment(header);
+            } break;
+            case COUNTRY_EDITION:
+            case COUNTRY_EDITION_V6:
+            case PROXY_EDITION:
+            case NETSPEED_EDITION: {
+                recordLength = STANDARD_RECORD_LENGTH;
+                databaseSegment = LookupService.COUNTRY_BEGIN;
+            } break;
+            case REGION_EDITION_REV0: {
+                recordLength = STANDARD_RECORD_LENGTH;
+                databaseSegment = LookupService.STATE_BEGIN_REV0;
+            } break;
+            case REGION_EDITION_REV1: {
+                recordLength = STANDARD_RECORD_LENGTH;
+                databaseSegment = LookupService.STATE_BEGIN_REV1;
+            } break;
+            default:
+                throw new InternalError("Cannot detect DB type!");
+        }
+
+        String info = header.asCharBuffer().toString();
+        date = parseDate(info);
+        premium = !info.contains("FREE");
+
     }
 
     public int getType() {
-        if (info == null || info.equals("")) {
-            return COUNTRY_EDITION;
-        } else {
-            // Get the type code from the database info string and then
-            // subtract 105 from the value to preserve compatability with
-            // databases from April 2003 and earlier.
-            return Integer.parseInt(info.substring(4, 7)) - 105;
-        }
+        return databaseType;
     }
 
     /**
@@ -97,7 +159,7 @@ public class DatabaseInfo {
      * @return true if the premium version of the database.
      */
     public boolean isPremium() {
-        return info.indexOf("FREE") < 0;
+        return premium;
     }
 
     /**
@@ -106,23 +168,51 @@ public class DatabaseInfo {
      * @return the date of the database.
      */
     public Date getDate() {
+        return date;
+    }
+
+    private Date parseDate(String info) {
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMdd");
         for (int i = 0; i < info.length() - 9; i++) {
             if (Character.isWhitespace(info.charAt(i))) {
                 String dateString = info.substring(i + 1, i + 9);
                 try {
-                    synchronized (formatter) {
-                        return formatter.parse(dateString);
-                    }
-                } catch (ParseException pe) {
-                }
+                    return formatter.parse(dateString);
+                } catch (ParseException pe) {}
                 break;
             }
         }
         return null;
     }
 
-    @Override
-    public String toString() {
-        return info;
+//    @Override
+//    public String toString() {
+//        return info;
+//    }
+
+
+    private ByteBuffer getHeader(Path path) throws IOException {
+        try(FileChannel fc = FileChannel.open(path, StandardOpenOption.READ, StandardOpenOption.WRITE); FileLock lock = fc.lock()) {
+
+            byte[] header = new byte[STRUCTURE_INFO_MAX_SIZE + 3];
+            long filePos = fc.size() - header.length;
+            fc.read(ByteBuffer.wrap(header), filePos);
+            int i;
+            for (i = 0; i < STRUCTURE_INFO_MAX_SIZE; i++) {
+                if (header[STRUCTURE_INFO_MAX_SIZE - i] == -1 && header[STRUCTURE_INFO_MAX_SIZE - i + 1] == -1 && header[STRUCTURE_INFO_MAX_SIZE - i + 2] == -1)
+                    return ByteBuffer.wrap(header, header.length - i, i);
+            }
+            return ByteBuffer.allocate(0);
+        }
     }
+
+    private static int databaseSegment(ByteBuffer header) throws IOException {
+        int dbSegment = 0;
+        for (int i = 0; i < SEGMENT_RECORD_LENGTH; i++)
+            dbSegment += (unsignedByteToInt(header.get()) << (i * 8));
+        return dbSegment;
+    }
+
+    private static int unsignedByteToInt(final byte b) { return (int) b & 0xFF; }
+
 }

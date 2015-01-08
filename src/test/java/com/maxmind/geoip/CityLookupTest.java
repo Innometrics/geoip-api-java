@@ -14,9 +14,7 @@ public class CityLookupTest {
 	@Test
 	public void testCityLookup() throws IOException {
 
-		LookupService cl = new LookupService(
-				"src/test/resources/GeoIP/GeoIPCity.dat",
-				LookupService.GEOIP_MEMORY_CACHE);
+		LookupService cl = new LookupService("src/test/resources/GeoIP/GeoIPCity.dat", LookupService.DBType.MEMORY_CACHE);
 
 		Location l1 = cl.getLocation("64.17.254.216");
 		Location l2 = cl.getLocation("66.92.181.240");
@@ -30,7 +28,7 @@ public class CityLookupTest {
 		assertEquals("94538", l2.postalCode);
 		assertEquals(37.507904, l2.latitude, DELTA);
 		assertEquals(-121.96, l2.longitude, DELTA);
-		assertEquals(512.893498, l2.distance(l1), DELTA);
+		assertEquals(512.892906, l2.distance(l1), DELTA); // We switched to calculating in double instead of rounding to float first.
 		assertEquals(l2.distance(l1), l1.distance(l2), DELTA);
 		assertEquals(807, l2.metro_code);
 		assertEquals(510, l2.area_code);

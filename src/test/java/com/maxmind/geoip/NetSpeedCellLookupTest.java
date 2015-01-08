@@ -13,8 +13,7 @@ import org.junit.Test;
 public class NetSpeedCellLookupTest {
     @Test
     public void testNetSpeedCellLookup() throws IOException {
-        LookupService ns = new LookupService(
-                "src/test/resources/GeoIP/GeoIPNetSpeedCell.dat");
+        LookupService ns = new LookupService("src/test/resources/GeoIP/GeoIPNetSpeedCell.dat", LookupService.DBType.File);
         assertEquals("Cable/DSL", ns.getOrg("89.66.148.0"));
         ns.close();
     }

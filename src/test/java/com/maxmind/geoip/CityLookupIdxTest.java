@@ -15,8 +15,7 @@ public class CityLookupIdxTest {
 	public void testCityLookupIdx() throws IOException {
 
 		LookupService cl = new LookupService(
-				"src/test/resources/GeoIP/GeoIPCity.dat",
-				LookupService.GEOIP_INDEX_CACHE);
+                "src/test/resources/GeoIP/GeoIPCity.dat", LookupService.DBType.INDEX_CACHE);
 
 		Location l1 = cl.getLocation("222.230.137.0");
 
