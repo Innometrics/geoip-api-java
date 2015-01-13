@@ -814,12 +814,19 @@ public class LookupService {
                     while(true) {
                         WatchKey wk = watchService.take();
                         boolean doUpdate = false;
-                        for (WatchEvent<?> event : wk.pollEvents())
+                        for (WatchEvent<?> event : wk.pollEvents()) {
                             doUpdate = doUpdate || filePath.equals(event.context());
+                        }
+
                         key.reset();
-                        LookupService updatedService = new LookupService(path, type);
-                        updatedService.watchThread = this;
-                        if(doUpdate) updateCallback.update(new LookupService(path, type));
+                        if (!doUpdate) continue;
+                        Thread.sleep(1000);
+                        try {
+                            LookupService updatedService = new LookupService(path, type);
+                            key.reset();
+                            updatedService.watchThread = this;
+                            updateCallback.update(new LookupService(path, type));
+                        } catch(Exception e) {}
                     }
                 } catch (IOException | InterruptedException e) {
                     e.printStackTrace();
